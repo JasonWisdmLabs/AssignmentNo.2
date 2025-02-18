@@ -1,0 +1,33 @@
+body {
+    background-image: url("images/background.png");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    backdrop-filter: blur(5px); /* Blur effect */
+}
+
+.login-card {
+    max-width: 800px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.9); 
+}
+
+.card img {
+    border-top-left-radius: 20px;
+    border-bottom-left-radius: 20px;
+}
+
+.card-body {
+    padding: 30px;
+}
+
+.h-custom {
+    height: calc(100% - 73px);
+}
+
+@media (max-width: 768px) {
+    .card img {
+        display: none;
+    }
+}
