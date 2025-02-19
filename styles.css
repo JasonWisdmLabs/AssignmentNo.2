@@ -3,7 +3,7 @@ body {
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    backdrop-filter: blur(5px); /* Blur effect */
+    backdrop-filter: blur(5px);
 }
 
 .login-card {

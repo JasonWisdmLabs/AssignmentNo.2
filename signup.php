@@ -6,16 +6,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
 
-    $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $name, $email, $password);
+    //Checking if the email ID already exists
+    $checkStmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+    $checkStmt->bind_param("s", $email);
+    $checkStmt->execute();
+    $checkStmt->store_result();
 
-    if ($stmt->execute()) {
-        header("Location: signin.php");
-        exit();
+    if ($checkStmt->num_rows > 0) {
+        $error = "Email already exists!";
     } else {
-        $error = "Error: Unable to register!";
+        // Inserting a new user
+        $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
+        $stmt->bind_param("sss", $name, $email, $password);
+
+        if ($stmt->execute()) {
+            header("Location: signin.php");
+            exit();
+        } else {
+            $error = "Unable to register!";
+        }
+        $stmt->close();
     }
-    $stmt->close();
+    $checkStmt->close();
 }
 ?>
 

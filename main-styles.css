@@ -50,17 +50,11 @@ body {
     border-radius: 5px;
 }
 
-.content {
-    margin-left: 20vw;
-    transition: margin-left 0.3s ease-in-out;
-}
-
-
-.sidebar:not(.show) ~ .content {
-    margin-left: 0;
-}
 #imageResults img {
     width: 100%;
     height: auto;
     object-fit: cover;
+}
+#imageResults {
+    position: relative;
 }
