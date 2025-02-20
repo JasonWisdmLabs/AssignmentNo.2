@@ -83,15 +83,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
         <h4>Search History</h4>
         <ul id="searchHistory">
             <?php if (!empty($search_history)): ?>
-            <?php foreach ($search_history as $hashtag): ?>
-            <li><a href="#" class="history-item">
-                    <?php echo $hashtag; ?>
-                </a></li>
-            <?php endforeach; ?>
+                <?php foreach ($search_history as $hashtag): ?>
+                    <li class="d-flex justify-content-between align-items-center">
+                        <a href="#" class="history-item"><?php echo $hashtag; ?></a>
+                        <button class="btn-close btn-close-white delete-history" data-hashtag="<?php echo $hashtag; ?>" aria-label="Close"></button>
+                    </li>
+                <?php endforeach; ?>
             <?php else: ?>
-            <li style="display: none;">No search history</li>
+                <li style="display: none;">No search history</li>
             <?php endif; ?>
         </ul>
+
 
         <form action="logout.php" method="POST" class="d-grid mt-3">
             <button type="submit" class="btn btn-danger">Logout</button>
@@ -291,6 +293,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
                 }
             });
         }
+
+        $("#searchHistory").on("click", ".delete-history", function () {
+        let hashtag = $(this).data("hashtag");
+        let listItem = $(this).closest("li");
+
+        $.ajax({
+                url: "delete_search_history.php",
+                type: "POST",
+                data: { hashtag: hashtag },
+                success: function (response) {
+                    if (response.trim() === "Success") {
+                        listItem.remove();
+                    } else {
+                        console.error("Error deleting hashtag:", response);
+                    }
+                },
+                error: function (error) {
+                    console.error("AJAX Error:", error);
+                }
+            });
+        });
+
     </script>
 
 </body>
