@@ -1,33 +1,41 @@
 <?php
 include "databaseConnection.php"; 
+$error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+    $name = trim($_POST['name']);
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);  // FIX: Added missing password retrieval
 
-    //Checking if the email ID already exists
-    $checkStmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-    $checkStmt->bind_param("s", $email);
-    $checkStmt->execute();
-    $checkStmt->store_result();
-
-    if ($checkStmt->num_rows > 0) {
-        $error = "Email already exists!";
+    // Server-side validation
+    if (empty($name) || empty($email) || empty($password)) {
+        $error = "All fields are required!";
     } else {
-        // Inserting a new user
-        $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $name, $email, $password);
+        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-        if ($stmt->execute()) {
-            header("Location: signin.php");
-            exit();
+        // Checking if the email ID already exists
+        $checkStmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+        $checkStmt->bind_param("s", $email);
+        $checkStmt->execute();
+        $checkStmt->store_result();
+
+        if ($checkStmt->num_rows > 0) {
+            $error = "Email already exists!";
         } else {
-            $error = "Unable to register!";
+            // Inserting a new user
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
+            $stmt->bind_param("sss", $name, $email, $hashedPassword);
+
+            if ($stmt->execute()) {
+                // FIX: Remove exit() and store a flag for JavaScript execution
+                $success = true;
+            } else {
+                $error = "Unable to register!";
+            }
+            $stmt->close();
         }
-        $stmt->close();
+        $checkStmt->close();
     }
-    $checkStmt->close();
 }
 ?>
 
@@ -39,6 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Sign Up</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 <section class="vh-100 d-flex justify-content-center align-items-center">
@@ -51,18 +60,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="col-md-6">
           <div class="card-body">
             <h3 class="text-center mb-4">Sign Up</h3>
-            <?php if (!empty($error)) echo "<p class='text-danger text-center'>$error</p>"; ?>
-            <form method="POST" action="signup.php">
+            <?php 
+            if (!empty($error)) { 
+                echo "<script>Swal.fire('Error', '$error', 'error');</script>"; 
+            }
+            ?>
+            <form method="POST" action="signup.php" onsubmit="return validateForm()">
               <div class="form-floating mb-4">
-                <input type="text" name="name" class="form-control" id="name" placeholder="Full Name" required>
+                <input type="text" name="name" class="form-control" id="name" placeholder="Full Name">
                 <label for="name">Full Name</label>
               </div>
               <div class="form-floating mb-4">
-                <input type="email" name="email" class="form-control" id="email" placeholder="Enter email" required>
+                <input type="email" name="email" class="form-control" id="email" placeholder="Enter email">
                 <label for="email">Email</label>
               </div>
               <div class="form-floating mb-3">
-                <input type="password" name="password" class="form-control" id="password" placeholder="Enter password" required>
+                <input type="password" name="password" class="form-control" id="password" placeholder="Enter password">
                 <label for="password">Password</label>
               </div>
               <button type="submit" class="btn btn-danger btn-lg w-100">Sign Up</button>
@@ -74,5 +87,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
   </div>
 </section>
+
+<script>
+function validateForm() {
+    let name = document.getElementById("name").value.trim();
+    let email = document.getElementById("email").value.trim();
+    let password = document.getElementById("password").value.trim();
+
+    if (name === "" || email === "" || password === "") {
+        Swal.fire('Error', 'All fields are required!', 'error');
+        return false;
+    }
+    return true;
+}
+
+// Success Alert Handling
+<?php if (isset($success) && $success === true) : ?>
+setTimeout(function() {
+    Swal.fire({
+        title: 'Account Created!',
+        text: 'Your account has been successfully created.',
+        icon: 'success',
+        confirmButtonText: 'OK'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'signin.php';
+        }
+    });
+}, 100);
+<?php endif; ?>
+</script>
+
 </body>
 </html>

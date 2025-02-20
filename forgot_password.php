@@ -32,12 +32,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Send Email
             $subject = "Password Reset Code";
             $message_body = "Your OTP code is: $otp";
-            $headers = "From: jasoncsfy2011@gmail.com";
+            $headers = "From: dsajason2002@gmail.com";
 
             if (mail($email, $subject, $message_body, $headers)) {
-                $_SESSION['otp_sent'] = true; // Store flag in session
-                $_SESSION['email'] = $email;  // Store email for autofill
-                header("Location: forgot_password.php"); // Refresh page to update UI
+                $_SESSION['otp_sent'] = true; 
+                $_SESSION['email'] = $email; 
+                header("Location: forgot_password.php");
                 exit();
             } else {
                 $message = "Failed to send OTP. Please try again.";

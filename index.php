@@ -8,6 +8,11 @@ if (!isset($_SESSION["user_id"])) {
     header("Location: signin.php"); 
     exit();
 }
+if (isset($_GET['q'])) {
+    $searchQuery = trim($_GET['q']);
+} else {
+    $searchQuery = ""; 
+}
 
 $user_id = $_SESSION["user_id"]; 
 
@@ -24,10 +29,6 @@ while ($row = $result->fetch_assoc()) {
 $stmt->close();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
-    if (!isset($_SESSION["user_id"])) {
-        echo "User not logged in";
-        exit;
-    }
 
     $user_id = $_SESSION["user_id"];
     $hashtag = trim($_POST["hashtag"]);
@@ -72,7 +73,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
                 <img src="images/Logo.png" alt="Logo" height="40">
             </a>
             <form class="d-flex ms-auto" role="search" id="searchForm">
-                <input class="form-control me-2" type="search" id="searchInput" placeholder="Search for Hashtags">
+                <input class="form-control me-2" type="search" id="searchInput" placeholder="Search for Hashtags" value="<?php echo $searchQuery; ?>">
                 <button class="btn btn-outline-light" type="submit">Search</button>
             </form>
         </div>
@@ -102,6 +103,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
     </div>
 
     <div class="container mt-4">
+        <div id="welcomeMessage">
+            <h1>Hello, <?php echo $_SESSION['username']; ?> 👋</h1>
+            <p>Image Finder is a tool to search images by entering a hashtag.</p>
+        </div>
+            <div id="loadingAnimation" class="text-center mt-5" style="display: none;">
+            <div class="spinner-border text-danger" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-danger">Loading images...</p>
+        
+        </div>
+        
         <div class="row" id="imageResults" data-masonry='{"percentPosition": true }'></div>
     </div>
 
@@ -118,37 +131,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
         });
 
         $(document).ready(function () {
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            let query = urlParams.get('q');
+
+            if (query) {
+                $("#searchInput").val(query);
+                $("#welcomeMessage").fadeOut(); // Hide welcome message if search exists
+                searchImages(query);
+            }
+
             $("#searchForm").submit(function (event) {
                 event.preventDefault();
-                let query = $("#searchInput").val();
+                let newQuery = $("#searchInput").val().trim();
 
-                $.ajax({
-                    url: "index.php",
-                    type: "POST",
-                    data: { hashtag: query },
-                    success: function (response) {
-                        console.log("Hashtag stored:", response);
-                    },
-                    error: function (error) {
-                        console.error("Error storing hashtag:", error);
-                    }
-                });
+                if (newQuery !== "") {
+                    $("#welcomeMessage").fadeOut();
 
-                // Updating search history dynamically
-                $.ajax({
-                    url: "fetch_search_history.php",
-                    type: "GET",
-                    success: function (data) {
-                        $("#searchHistory").html(data);
-                    }
-                });
+                    // Update the URL without reloading the page
+                    window.history.pushState({}, '', `?q=${encodeURIComponent(newQuery)}`);
 
-                searchImages(query);
+                    // Store hashtag in the database
+                    $.ajax({
+                        url: "index.php",
+                        type: "POST",
+                        data: { hashtag: newQuery },
+                        success: function (response) {
+                            console.log("Hashtag stored:", response);
+                        },
+                        error: function (error) {
+                            console.error("Error storing hashtag:", error);
+                        }
+                    });
+
+                    // Update search history dynamically
+                    $.ajax({
+                        url: "fetch_search_history.php",
+                        type: "GET",
+                        success: function (data) {
+                            $("#searchHistory").html(data);
+                        }
+                    });
+
+                    // Fetch images based on the search query
+                    searchImages(newQuery);
+                }
             });
         });
 
         //API Callings
         function searchImages(query) {
+            $("#loadingAnimation").show();  // Show loading animation
+            $("#imageResults").html("");  // Clear previous results
+
             let unsplashRequest = $.ajax({
                 url: `https://api.unsplash.com/search/photos`,
                 type: "GET",
@@ -182,6 +217,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
             let instagramRequest = fetchInstagramImages(query);
 
             $.when(unsplashRequest, pexelsRequest, openverseRequest, instagramRequest).done(function (unsplashResponse, pexelsResponse, openverseResponse, instagramResponse) {
+                $("#loadingAnimation").hide();  
                 $("#imageResults").html("");
                 console.log("UnSplash: ", unsplashRequest);
                 console.log("Pexels: ", pexelsRequest);
@@ -191,7 +227,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["hashtag"])) {
                 // Display Unsplash results
                 unsplashResponse[0].results.forEach(image => {
                     $("#imageResults").append(`
-                <div class="col-md-4 mb-4">
+                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+
                     <div class="card">
                         <img src="${image.urls.small}" class="card-img-top" alt="${image.alt_description}" loading="lazy">
                         <div class="card-body">
